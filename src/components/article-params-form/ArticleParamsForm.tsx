@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 
-import { useEffect, useRef, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 
 import { ArrowButton } from 'src/ui/arrow-button';
 import { Button } from 'src/ui/button';
@@ -33,36 +33,11 @@ export const ArticleParamsForm = ({
 }: ArticleParamsFormProps) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const containerElementRef = useRef<HTMLDivElement>(null);
-	const formElementRef = useRef<HTMLFormElement>(null);
 	const [formParams, setFormParams] = useState<ArticleStateType>(articleState);
 
 	useEffect(() => {
 		setFormParams(articleState);
 	}, [articleState]);
-
-	useEffect(() => {
-		const form = formElementRef.current;
-		if (!form) {
-			return;
-		}
-
-		const submitHandler = (event: Event) => {
-			event.preventDefault();
-			applyHandler(formParams);
-		};
-
-		if (isOpen) {
-			form.addEventListener('submit', submitHandler);
-			form.addEventListener('reset', resetHandler);
-		}
-
-		return () => {
-			if (form) {
-				form.removeEventListener('submit', submitHandler);
-				form.removeEventListener('reset', resetHandler);
-			}
-		};
-	}, [isOpen, formParams, resetHandler]);
 
 	useCloseOnOutsideClickOrEsc({
 		isOpen,
@@ -72,6 +47,11 @@ export const ArticleParamsForm = ({
 
 	const toggleForm = () => {
 		setIsOpen((isOpen) => !isOpen);
+	};
+
+	const onSubmitClick = (event: FormEvent<HTMLFormElement>) => {
+		event.preventDefault();
+		applyHandler(formParams);
 	};
 
 	const formParamChanged = (
@@ -90,7 +70,10 @@ export const ArticleParamsForm = ({
 			<aside
 				ref={containerElementRef}
 				className={clsx(styles.container, { [styles.container_open]: isOpen })}>
-				<form className={styles.form} ref={formElementRef}>
+				<form
+					className={styles.form}
+					onSubmit={onSubmitClick}
+					onReset={resetHandler}>
 					<h2 className={styles.title}>Задайте параметры</h2>
 					<Select
 						title='Шрифт'
