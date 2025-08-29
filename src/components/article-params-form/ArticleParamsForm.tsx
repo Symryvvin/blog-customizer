@@ -18,97 +18,114 @@ import {
 	OptionType,
 } from 'src/constants/articleProps';
 import { RadioGroup } from 'src/ui/radio-group';
-import { useOutsideClickClose } from 'src/ui/select/hooks/useOutsideClickClose';
+import { useCloseOnOutsideClickOrEsc } from 'components/article-params-form/hooks/useCloseOnOutsideClickOrEsc';
 
 type ArticleParamsFormProps = {
-	onReset: () => void;
-	onApply: (state: ArticleStateType) => void;
+	resetHandler: () => void;
+	applyHandler: (state: ArticleStateType) => void;
 	articleState: ArticleStateType;
 };
 
 export const ArticleParamsForm = ({
-	onReset,
-	onApply,
+	resetHandler,
+	applyHandler,
 	articleState,
 }: ArticleParamsFormProps) => {
 	const [isOpen, setIsOpen] = useState(false);
-	const rootRef = useRef<HTMLDivElement>(null);
+	const containerElementRef = useRef<HTMLDivElement>(null);
+	const formElementRef = useRef<HTMLFormElement>(null);
 	const [formParams, setFormParams] = useState<ArticleStateType>(articleState);
 
 	useEffect(() => {
 		setFormParams(articleState);
 	}, [articleState]);
 
-	useOutsideClickClose({
+	useEffect(() => {
+		const form = formElementRef.current;
+		if (!form) {
+			return;
+		}
+
+		const submitHandler = (event: Event) => {
+			event.preventDefault();
+			applyHandler(formParams);
+		};
+
+		if (isOpen) {
+			form.addEventListener('submit', submitHandler);
+			form.addEventListener('reset', resetHandler);
+		}
+
+		return () => {
+			if (form) {
+				form.removeEventListener('submit', submitHandler);
+				form.removeEventListener('reset', resetHandler);
+			}
+		};
+	}, [isOpen, formParams, resetHandler]);
+
+	useCloseOnOutsideClickOrEsc({
 		isOpen,
-		rootRef,
-		onClose: () => {},
+		rootRef: containerElementRef,
 		onChange: setIsOpen,
 	});
 
-	const onArrowButtonClick = () => {
+	const toggleForm = () => {
 		setIsOpen((isOpen) => !isOpen);
 	};
 
-	const onChangeParam = (key: keyof typeof formParams, value: OptionType) => {
+	const formParamChanged = (
+		key: keyof typeof formParams,
+		value: OptionType
+	) => {
 		setFormParams((prev) => ({
 			...prev,
 			[key]: value,
 		}));
 	};
 
-	const onSubmitClick = (event: React.FormEvent<HTMLFormElement>) => {
-		event.preventDefault();
-		onApply(formParams);
-	};
-
 	return (
 		<>
-			<ArrowButton isOpen={isOpen} onClick={onArrowButtonClick} />
+			<ArrowButton isOpen={isOpen} onClick={toggleForm} />
 			<aside
-				ref={rootRef}
+				ref={containerElementRef}
 				className={clsx(styles.container, { [styles.container_open]: isOpen })}>
-				<form className={styles.form} onSubmit={onSubmitClick}>
+				<form className={styles.form} ref={formElementRef}>
 					<h2 className={styles.title}>Задайте параметры</h2>
 					<Select
 						title='Шрифт'
 						options={fontFamilyOptions}
 						selected={formParams.fontFamilyOption}
-						onChange={(option) => onChangeParam('fontFamilyOption', option)}
+						onChange={(option) => formParamChanged('fontFamilyOption', option)}
 					/>
 					<RadioGroup
 						name='fontSizeOption'
 						options={fontSizeOptions}
 						selected={formParams.fontSizeOption}
 						title='Размер шрифта'
-						onChange={(option) => onChangeParam('fontSizeOption', option)}
+						onChange={(option) => formParamChanged('fontSizeOption', option)}
 					/>
 					<Select
 						title='Цвет шрифта'
 						options={fontColors}
 						selected={formParams.fontColor}
-						onChange={(option) => onChangeParam('fontColor', option)}
+						onChange={(option) => formParamChanged('fontColor', option)}
 					/>
 					<Separator />
 					<Select
 						title='Цвет фона'
 						options={backgroundColors}
 						selected={formParams.backgroundColor}
-						onChange={(option) => onChangeParam('backgroundColor', option)}
+						onChange={(option) => formParamChanged('backgroundColor', option)}
 					/>
 					<Select
 						title='Ширина контента'
 						options={contentWidthArr}
 						selected={formParams.contentWidth}
-						onChange={(option) => onChangeParam('contentWidth', option)}
+						onChange={(option) => formParamChanged('contentWidth', option)}
 					/>
 					<div className={styles.bottomContainer}>
-						<Button
-							title='Сбросить'
-							htmlType='reset'
-							type='clear'
-							onClick={onReset}
-						/>
+						<Button title='Сбросить' htmlType='reset' type='clear' />
 						<Button title='Применить' htmlType='submit' type='apply' />
 					</div>
 				</form>
